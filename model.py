@@ -89,3 +89,19 @@ def periodic_kernel(X1, X2, length_scale=1.0, period=1.0, signal_var=1.0):
     r = np.sqrt(np.clip(r, 0, None))
     return signal_var*np.exp(-2/length_scale**2 * np.sin(np.pi*r / period)**2)
 
+# Step 4 - linear_kernel
+import numpy as np
+from scipy.linalg import cho_solve, solve_triangular
+from scipy.optimize import minimize
+
+
+def as_2d(X):
+    X = np.asarray(X, dtype=float)
+    return X[:, None] if X.ndim == 1 else X
+
+
+def linear_kernel(X1, X2, c=0.0, tau=1.0):
+    # TODO: return tau * (X1 - c) @ (X2 - c).T for 2-D inputs.
+    X1_2d, X2_2d = as_2d(X1), as_2d(X2)
+    return tau* (X1_2d-c) @ (X2_2d - c).T
+
