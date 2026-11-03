@@ -172,3 +172,38 @@ def sample_gp_prior(K, n_samples, rng, jitter=1e-8):
     # Transform noise and transpose to get (n_samples, n)
     return (L @ Z).T
 
+# Step 8 - gp_condition
+import numpy as np
+from scipy.linalg import cho_solve, solve_triangular
+from scipy.optimize import minimize
+
+def gp_condition(X, f, Xs, kernel, jitter=1e-10):
+    """
+    Computes the noiseless GP posterior mean and covariance conditioned on observations (X, f).
+    
+    mu  = Ks.T @ K^{-1} @ f
+    cov = Kss - Ks.T @ K^{-1} @ Ks
+    """
+    X, Xs = np.asarray(X), np.asarray(Xs)
+    N = X.shape[0]
+
+    # Compute covariance matrices
+    K = kernel(X, X) + jitter * np.eye(N)
+    Ks = kernel(X, Xs)
+    Kss = kernel(Xs, Xs)
+
+    # Cholesky decomposition: K = L @ L.T
+    L = np.linalg.cholesky(K)
+
+    # Compute v = L^{-1} @ Ks so that v.T @ v = Ks.T @ K^{-1} @ Ks
+    v = solve_triangular(L, Ks, lower=True)
+
+    # Compute alpha = K^{-1} @ f = L.T^{-1} @ (L^{-1} @ f)
+    alpha = solve_triangular(L.T, solve_triangular(L, f, lower=True), lower=False)
+
+    # Posterior mean and covariance
+    mu = Ks.T @ alpha
+    cov = Kss - v.T @ v
+
+    return mu, cov
+
