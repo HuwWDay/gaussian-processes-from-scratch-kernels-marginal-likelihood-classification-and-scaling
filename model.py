@@ -157,3 +157,18 @@ def is_valid_gram(K, tol=1e-8):
     
     return symmetric, min_eig, valid
 
+# Step 7 - sample_gp_prior
+def sample_gp_prior(K, n_samples, rng, jitter=1e-8):
+    """
+    Draws samples from a Gaussian Process prior with covariance matrix K.
+    """
+    n = K.shape[0]
+    # Add jitter to the diagonal for numerical stability during Cholesky decomposition
+    L = np.linalg.cholesky(K + jitter * np.eye(n))
+    
+    # Draw standard normal noise of shape (n, n_samples)
+    Z = rng.standard_normal((n, n_samples))
+    
+    # Transform noise and transpose to get (n_samples, n)
+    return (L @ Z).T
+
