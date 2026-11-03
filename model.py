@@ -137,3 +137,23 @@ def kernel_from_spec(spec, X1, X2):
         params = spec[1] if len(spec) > 1 else {}
         return KERNELS[name](X1, X2, **params)
 
+# Step 6 - is_valid_gram
+def is_valid_gram(K, tol=1e-8):
+    """
+    Checks if a matrix K is a valid Gram matrix (symmetric and positive semi-definite).
+    Returns: (symmetric, min_eig, valid) as (bool, float, bool).
+    """
+    K = np.asarray(K)
+    
+    # Check symmetry: max absolute difference between K and its transpose <= 1e-10
+    symmetric = bool(np.max(np.abs(K - K.T)) <= 1e-10)
+    
+    # Compute smallest eigenvalue of the symmetrized matrix
+    K_sym = (K + K.T) / 2.0
+    min_eig = float(np.min(np.linalg.eigvalsh(K_sym)))
+    
+    # Valid if it is symmetric and the minimum eigenvalue is >= -tol
+    valid = bool(symmetric and min_eig >= -tol)
+    
+    return symmetric, min_eig, valid
+
