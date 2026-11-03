@@ -105,3 +105,35 @@ def linear_kernel(X1, X2, c=0.0, tau=1.0):
     X1_2d, X2_2d = as_2d(X1), as_2d(X2)
     return tau* (X1_2d-c) @ (X2_2d - c).T
 
+# Step 5 - kernel_from_spec
+import numpy as np
+from scipy.linalg import cho_solve, solve_triangular
+from scipy.optimize import minimize
+
+
+KERNELS = {"se": se_kernel, "matern": matern_kernel, "periodic": periodic_kernel, "linear": linear_kernel}
+
+
+def kernel_from_spec(spec, X1, X2):
+    """
+    Evaluates a kernel built from a nested specification using the sum and product rules.
+    """
+    op = spec[0]
+    
+    if op == "+":
+        # Sum of all child specs: sum their resulting (n1, n2) matrices
+        return sum(kernel_from_spec(child, X1, X2) for child in spec[1:])
+    
+    elif op == "*":
+        # Product of all child specs: multiply their resulting (n1, n2) matrices elementwise
+        result = 1.0
+        for child in spec[1:]:
+            result = result * kernel_from_spec(child, X1, X2)
+        return result
+    
+    else:
+        # Leaf node: (name, params) or just (name,)
+        name = op
+        params = spec[1] if len(spec) > 1 else {}
+        return KERNELS[name](X1, X2, **params)
+
