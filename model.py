@@ -207,3 +207,40 @@ def gp_condition(X, f, Xs, kernel, jitter=1e-10):
 
     return mu, cov
 
+# Step 9 - gp_predict
+import numpy as np
+from scipy.linalg import cho_solve, solve_triangular
+from scipy.optimize import minimize
+
+
+def gp_predict(X, y, Xs, kernel, noise_var):
+    """
+    Computes the noisy-observation GP posterior mean and marginal latent variance
+    using the Cholesky recipe.
+    
+    Returns:
+        mu:  posterior mean of shape (Ns,)
+        var: posterior marginal latent variance of shape (Ns,)
+    """
+    X, y, Xs = np.asarray(X), np.asarray(y), np.asarray(Xs)
+    N = X.shape[0]
+
+    # 1. K_sigma = K(X, X) + noise_var * I, and L = cholesky(K_sigma)
+    K_sigma = kernel(X, X) + noise_var * np.eye(N)
+    L = np.linalg.cholesky(K_sigma)
+
+    # 2. alpha = L.T \ (L \ y)
+    alpha = solve_triangular(L.T, solve_triangular(L, y, lower=True), lower=False)
+
+    # 3. K_Xs = kernel(X, Xs), mu = K_Xs.T @ alpha
+    Ks = kernel(X, Xs)
+    mu = Ks.T @ alpha
+
+    # 4. v = L \ K_Xs, var = diag(K_ss) - sum(v^2, axis=0)
+    v = solve_triangular(L, Ks, lower=True)
+    Kss = kernel(Xs, Xs)
+    var = np.diag(Kss) - np.sum(v**2, axis=0)
+
+    # Ensure mu and var are 1D arrays of length N* and variance is non-negative
+    return np.squeeze(mu), np.clip(np.squeeze(var), 0.0, None)
+
